@@ -1,6 +1,7 @@
 import { Logger } from "@utils/logger";
 import mqtt from "mqtt";
 import { Server } from "socket.io";
+import { log } from "console";
 
 const io = new Server({
   transports: ["websocket"],
@@ -10,15 +11,16 @@ const io = new Server({
   },
 });
 
-io.on("connection", (socket) => {
+io.on("connection", (_) => {
   Logger.info("webscoket server up!");
 });
 
-const client = mqtt.connect(process.env.BROKER_URL, {
+const client = mqtt.connect("mqtts://z8112f26.ala.asia-southeast1.emqxsl.com:8883", {
   port: 8883,
   clean: true,
-  username: process.env.BROKER_SUPER_USER_USERNAME,
-  password: process.env.BROKER_SUPER_USER_PASSWORD,
+  clientId: "voyager",
+  username: "voyager_telemetry_sub_service",
+  password: "123",
   connectTimeout: 4000,
   reconnectPeriod: 1000,
 });
@@ -43,11 +45,12 @@ type SocketData = {
 };
 
 client.on("message", (topic, payload) => {
-  if (topic === "telemetry-data") {
+  if (topic === "telemetry/#") {
+    log(topic);
     const data = JSON.parse(payload.toString()) as SocketData;
-    console.log({ ...data });
+    log({ ...data });
     io.emit("message", data);
   }
 });
 
-io.listen(5000);
+export default io;
