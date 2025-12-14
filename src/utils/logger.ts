@@ -9,10 +9,10 @@ const logger = winston.createLogger({
         format.colorize({ all: true }),
         format.printf((info): string => {
           if (typeof info.level === "string" && typeof info.message === "string") {
-            return `${info.level}: ${info.message}`;
+            return `${info.level}: ${info.message} at ${new Date().toString()}`;
           }
           return "";
-        }),
+        })
       ),
     }),
 
@@ -20,7 +20,9 @@ const logger = winston.createLogger({
       level: "debug",
       format: format.combine(
         format.colorize({ all: true, colors: { debug: "yellow" } }),
-        format.printf(({ level, message }) => `${level}: ${message}`),
+        format.printf(
+          ({ level, message }) => `${level}: ${message as string} at ${new Date().toString()}`
+        )
       ),
     }),
 
@@ -28,9 +30,12 @@ const logger = winston.createLogger({
       level: "info",
       format: format.combine(
         format.colorize({ all: true }),
-        format.printf(({ level, message }) => `${level}: ${message}`),
+        format.printf(
+          ({ level, message }) => `${level}: ${message as string} at ${new Date().toString()}`
+        )
       ),
     }),
+
     new winston.transports.File({
       filename: path.join("logs", "error.log"),
       level: "error",
