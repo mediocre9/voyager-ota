@@ -1,5 +1,5 @@
 import { Topic } from "@models/topic.model";
-import { Nullable } from "@interfaces/common/common";
+import { Nullable } from "@utils/utils";
 import { Transaction } from "sequelize";
 
 const MAX_TOPIC_LIMIT_PER_TELEMETRY = 5;

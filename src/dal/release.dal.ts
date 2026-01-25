@@ -1,16 +1,16 @@
-import { Release, ReleaseChannel } from "@models/release.model";
+import { Release, ReleaseStatus } from "@models/release.model";
 import { Op } from "sequelize";
 import { Transaction } from "sequelize";
 import sequelize from "sequelize";
-import { Artifact } from "@models/artifact.model";
-import { Nullable } from "@interfaces/common/common";
+import { ArtifactFile } from "@models/artifact.model";
+import { Nullable } from "@utils/utils";
 
 export async function createRelease(
   projectId: number,
   version: string,
   flattenedVersion: number,
   changelog?: string,
-  transactionObject?: Transaction,
+  transactionObject?: Transaction
 ): Promise<Release> {
   return await Release.create(
     {
@@ -19,17 +19,13 @@ export async function createRelease(
       flatten_version: flattenedVersion,
       change_log: changelog,
     },
-    { transaction: transactionObject, isNewRecord: true },
+    { transaction: transactionObject, isNewRecord: true }
   );
 }
 
-export async function hasVersionCollision(
-  projectId: number,
-  version: number,
-): Promise<Nullable<Release>> {
+export async function hasVersionCollision(version: number): Promise<Nullable<Release>> {
   const found = await Release.findOne({
     where: {
-      project_id_fk: projectId,
       flatten_version: {
         [Op.gte]: version,
       },
@@ -42,47 +38,49 @@ export async function hasVersionCollision(
 export async function hashCollision(releaseId: string, hash: string) {
   const found = await Release.findAll({
     where: { public_id: releaseId },
-    include: [{ model: Artifact, required: true, where: { hash: hash } }],
+    include: [{ model: ArtifactFile, required: true, where: { hash: hash } }],
   });
   return found;
 }
 
-export async function updateReleaseChannel(
+export async function updateStatus(
   releaseId: string,
-  channel: ReleaseChannel,
-  transaction?: Transaction,
+  status: ReleaseStatus,
+  transaction?: Transaction
 ): Promise<void> {
-  await Release.upsert(
+  await Release.update(
+    { status: status },
     {
-      channel: channel,
-      public_id: releaseId,
-    },
-    { transaction: transaction },
+      where: {
+        public_id: releaseId,
+      },
+      transaction: transaction,
+    }
   );
 }
 
 export async function setProductionReleaseDate(
   releaseId: string,
-  transaction?: Transaction,
+  transaction?: Transaction
 ): Promise<void> {
   await Release.update(
     { released_at: new Date() },
     {
       where: {
-        [Op.and]: [{ public_id: releaseId }, { channel: "production" }],
+        [Op.and]: [{ public_id: releaseId }, { status: "production" }],
       },
       transaction: transaction,
-    },
+    }
   );
 }
 
 export async function getAllReleases(
   projectId: number,
-  channel?: ReleaseChannel | "all",
+  status?: ReleaseStatus | "all",
   limit?: number,
-  offset?: number,
+  offset?: number
 ): Promise<readonly Release[]> {
-  if (channel === "all") {
+  if (status === "all") {
     const releases = await Release.findAll({
       limit: limit,
       offset: offset,
@@ -90,8 +88,8 @@ export async function getAllReleases(
       order: [["flatten_version", "DESC"]],
       include: [
         {
-          model: Artifact,
-          attributes: ["public_id", "hash", "original_filename", "filename", "size"],
+          model: ArtifactFile,
+          attributes: ["public_id", "hash", "filename", "size"],
         },
       ],
     });
@@ -102,10 +100,10 @@ export async function getAllReleases(
   const releases = await Release.findAll({
     limit: limit,
     offset: offset,
-    where: { project_id_fk: projectId, channel: channel },
+    where: { project_id_fk: projectId, status: status },
     include: [
       {
-        model: Artifact,
+        model: ArtifactFile,
         attributes: ["public_id", "hash", "filename", "size"],
       },
     ],
@@ -117,7 +115,7 @@ export async function getAllReleases(
 
 export async function deleteAllReleases(
   projectId: number,
-  transactionObject?: Transaction,
+  transactionObject?: Transaction
 ): Promise<void> {
   await Release.destroy({
     where: { project_id_fk: projectId },
@@ -151,30 +149,18 @@ export async function purgeAllReleases(date: Date, transactionObject?: Transacti
 
 export async function deleteReleaseByPublicId(
   publicId: string,
-  transaction?: Transaction,
-  hardDelete: boolean = false,
+  transactionObject?: Transaction
 ): Promise<void> {
   await Release.destroy({
     where: { public_id: publicId },
-    transaction: transaction,
-    force: hardDelete,
+    transaction: transactionObject,
+    force: false,
   });
 }
 
 export async function findReleaseByPublicId(publicId: string): Promise<Nullable<Release>> {
   const release = await Release.findOne({
     where: { public_id: publicId },
-  });
-
-  return release;
-}
-
-export async function findSoftDeletedReleaseByPublicId(
-  publicId: string,
-): Promise<Nullable<Release>> {
-  const release = await Release.findOne({
-    where: { public_id: publicId },
-    paranoid: false,
   });
 
   return release;
@@ -190,17 +176,17 @@ export async function findReleaseByVersion(version: string): Promise<Nullable<Re
 
 export async function getLatestRelease(
   projectId: number,
-  channel: ReleaseChannel,
+  status: ReleaseStatus
 ): Promise<Nullable<Release>> {
   const release = await Release.findOne({
     where: {
       project_id_fk: projectId,
-      channel: channel,
+      status,
     },
     attributes: [
       "public_id",
       "version",
-      "channel",
+      "status",
       "change_log",
       "created_at",
       "released_at",
@@ -208,7 +194,7 @@ export async function getLatestRelease(
     ],
     include: [
       {
-        model: Artifact,
+        model: ArtifactFile,
         required: true,
         attributes: ["public_id", "hash", "filename", "size"],
       },
