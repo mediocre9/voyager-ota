@@ -1,5 +1,6 @@
 import { db } from "@config/db.config";
 import {
+  CreationOptional,
   DataTypes,
   InferAttributes,
   InferCreationAttributes,
@@ -16,68 +17,17 @@ export interface ArtifactFileDTO {
   hash: string;
 }
 
-export type ArtifactProcessState = "processed" | "pending" | "revoked";
-export type ArtifactBuildStatus = "development-build" | "production-build" | "unknown-build";
-
-export class Artifact extends Model<InferAttributes<Artifact>, InferCreationAttributes<Artifact>> {
+export class ArtifactFile extends Model<
+  InferAttributes<ArtifactFile>,
+  InferCreationAttributes<ArtifactFile>
+> {
   declare id?: number;
   declare release_id_fk?: number;
   declare filename?: string;
-  declare original_filename?: string;
   declare public_id?: string;
   declare hash?: string;
   declare size?: number;
-  declare state?: ArtifactProcessState;
-  declare build_status?: ArtifactBuildStatus;
-  declare deleted_at?: Date | null;
-
-  getId() {
-    return this.getDataValue("id")!;
-  }
-
-  getReleaseForeignKeyId() {
-    return this.getDataValue("release_id_fk")!;
-  }
-
-  getFileSize() {
-    return this.getDataValue("size")!;
-  }
-
-  getPublicId() {
-    return this.getDataValue("public_id")!;
-  }
-
-  getFileName() {
-    return this.getDataValue("filename")!;
-  }
-
-  getOriginalFileName() {
-    return this.getDataValue("original_filename");
-  }
-
-  getFileProcessState() {
-    return this.getDataValue("state")!;
-  }
-
-  isProcessed() {
-    return this.getDataValue("state")! === "processed";
-  }
-
-  isRevoked() {
-    return this.getDataValue("state")! === "revoked";
-  }
-
-  isPending() {
-    return this.getDataValue("state")! === "pending";
-  }
-
-  getFileBuildStatus() {
-    return this.getDataValue("build_status")!;
-  }
-
-  getFileHash() {
-    return this.getDataValue("hash")!;
-  }
+  declare deleted_at: CreationOptional<Date>;
 
   toDTO(): NonAttribute<ArtifactFileDTO> {
     return {
@@ -89,7 +39,7 @@ export class Artifact extends Model<InferAttributes<Artifact>, InferCreationAttr
   }
 }
 
-Artifact.init(
+ArtifactFile.init(
   {
     id: {
       type: DataTypes.BIGINT.UNSIGNED,
@@ -104,9 +54,7 @@ Artifact.init(
       },
       unique: true,
     },
-    original_filename: {
-      type: DataTypes.STRING,
-    },
+
     public_id: {
       type: DataTypes.STRING,
       unique: true,
@@ -118,16 +66,6 @@ Artifact.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    state: {
-      type: DataTypes.ENUM("processed", "pending", "revoked"),
-      defaultValue: "pending",
-      allowNull: false,
-    },
-    build_status: {
-      type: DataTypes.ENUM("development-build", "production-build", "unknown-build"),
-      defaultValue: "unknown-build",
-      allowNull: false,
-    },
     hash: { type: DataTypes.STRING, allowNull: true },
     size: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true, defaultValue: 0 },
     deleted_at: {
@@ -137,12 +75,12 @@ Artifact.init(
   },
   {
     sequelize: db,
-    modelName: "Artifact",
+    modelName: "ArtifactFile",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
-    tableName: "artifact",
+    tableName: "artifact_file",
     paranoid: true,
     deletedAt: "deleted_at",
-  },
+  }
 );
