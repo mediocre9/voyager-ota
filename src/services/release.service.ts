@@ -1,23 +1,20 @@
-import { db } from "@config/db.config";
-import * as ArtifactDAL from "@dal/artifact.dal";
 import * as ProjectDAL from "@dal/project.dal";
 import * as ReleaseDAL from "@dal/release.dal";
-import { Nullable, NullableOrUndefined } from "@interfaces/common/common";
 import { ReleaseAttributesDTO } from "@models/release.model";
-import { ProjectIdPathParam } from "@schemas/project.schema";
 import {
-  ReleaseArtifactIdPathParams,
   ReleaseBaseQueryParam,
-  ReleaseChannelQueryParam,
-  ReleaseIdPathParam,
+  ReleaseBaseQueryParamSchema,
+  ReleaseDTO,
+  ReleaseIdQueryParam,
+  ReleaseStatusQueryParam,
+  ReleaseStatusUpdateDTO,
 } from "@schemas/release.schema";
-import { FileStorageOperation } from "@utils/common";
 import { ApiError } from "@utils/error";
 import { Logger } from "@utils/logger";
 import * as Utils from "@utils/utils";
 import { StatusCodes } from "http-status-codes";
 import { inject, injectable } from "tsyringe";
-import { ReleaseCacheService } from "./cache.service";
+import { CacheService } from "./cache.service";
 
 /**
  * @description currently under development
@@ -66,15 +63,13 @@ import { ReleaseCacheService } from "./cache.service";
 @injectable()
 export class ArtifactReleaseService {
   constructor(
-    @inject(ReleaseCacheService)
-    private readonly _cache: ReleaseCacheService,
+    @inject(CacheService)
+    private readonly _cache: CacheService
   ) {}
 
-  public async createRelease(
-    projectId: string,
-    version: string,
-    changelog: string,
-  ): Promise<NullableOrUndefined<string>> {
+  public async createRelease(payload: ReleaseDTO): Promise<Utils.NullableOrUndefined<string>> {
+    const { projectId, version, changelog } = payload;
+
     const project = await ProjectDAL.findProjectByPublicId(projectId);
 
     if (!project) {
@@ -84,128 +79,47 @@ export class ArtifactReleaseService {
     if (!Utils.isSemver(version)) {
       throw new ApiError(
         `${version} is not a valid semantic version format!`,
-        StatusCodes.BAD_REQUEST,
+        StatusCodes.BAD_REQUEST
       );
     }
 
     const normalizedVersion = Utils.getNormalizedVersion(version);
 
-    const collisionRelease = await ReleaseDAL.hasVersionCollision(
-      project.getId(),
-      normalizedVersion,
-    );
-
-    if (collisionRelease) {
+    const collision = await ReleaseDAL.hasVersionCollision(normalizedVersion);
+    if (collision) {
       throw new ApiError(
-        `Artifact version v${version} should be greater than the most recent previous release v${collisionRelease.getVersion()}!`,
-        StatusCodes.BAD_REQUEST,
-      );
-    }
-
-    const releases = await ReleaseDAL.getAllReleases(project.getId(), "all");
-    const mostRecentPriorRelease = releases[0];
-    const hasNotMostRecentPriorProdRelease =
-      releases.length > 0 &&
-      (mostRecentPriorRelease.isDraft() || mostRecentPriorRelease.isStaging());
-
-    if (hasNotMostRecentPriorProdRelease) {
-      throw new ApiError(
-        `Release cannot be created as most prior latest release v${mostRecentPriorRelease.getVersion()} is still in ${mostRecentPriorRelease.getChannel()} mode.`,
-        StatusCodes.BAD_REQUEST,
+        `Artifact version ${version} should be greater than the most recent previous release ${collision.version}!`,
+        StatusCodes.BAD_REQUEST
       );
     }
 
     const release = await ReleaseDAL.createRelease(
-      project.getId(),
+      project.id!,
       version,
       normalizedVersion,
-      changelog,
+      changelog
     );
 
-    return release.getPublicId();
+    return release.public_id;
   }
 
-  // *Soft Deletes record and moves release binary to trash folder....
-  // todo regression test it.....
-  public async removeRelease(pathParam: ReleaseIdPathParam): Promise<void> {
-    const { releaseId } = pathParam;
+  public async removeRelease(queryParam: ReleaseIdQueryParam): Promise<void> {
+    const { id } = queryParam;
 
-    const release = await ReleaseDAL.findReleaseByPublicId(releaseId);
+    const release = await ReleaseDAL.findReleaseByPublicId(id);
     if (!release) {
       throw new ApiError("Release not found!", StatusCodes.NOT_FOUND);
     }
 
-    if (release.isProduction()) {
-      throw new ApiError("Production release cannot be deleted!", StatusCodes.BAD_REQUEST);
-    }
-
-    if (release.isDraft()) {
-      try {
-        await ReleaseDAL.deleteReleaseByPublicId(releaseId);
-        Logger.info("Release successfully deleted");
-      } catch (error) {
-        Logger.error(error as string);
-        throw error;
-      }
-    }
-
-    if (release.isStaging()) {
-      const transaction = await db.transaction();
-      try {
-        const artifact = await ArtifactDAL.findProcessedArtifact(release.getId());
-        await ReleaseDAL.deleteReleaseByPublicId(releaseId, transaction);
-        await ArtifactDAL.deleteArtifactByReleaseId(release.getId(), transaction);
-
-        const filename = artifact!.getFileName();
-        await FileStorageOperation.moveBinaryToTrashFolder(filename);
-
-        await transaction.commit();
-        Logger.info("Release successfully deleted");
-      } catch (error) {
-        Logger.error(error as string);
-        await transaction.rollback();
-        throw error;
-      }
-    }
-  }
-
-  // * Restores records in db and moves file from trash directory to main storage directory...
-  public async restoreRelease(pathParam: ReleaseIdPathParam): Promise<void> {
-    const { releaseId } = pathParam;
-
-    const release = await ReleaseDAL.findSoftDeletedReleaseByPublicId(releaseId);
-    if (!release) {
-      throw new ApiError("Release not found!", StatusCodes.NOT_FOUND);
-    }
-
-    if (release.isProduction()) {
-      throw new ApiError("Production releases cannot be restored!", StatusCodes.BAD_REQUEST);
-    }
-
-    const transaction = await db.transaction();
-    try {
-      const artifact = await ArtifactDAL.findSoftDeletedArtifactByReleaseId(release.getId());
-      await artifact?.restore({ transaction: transaction });
-      await release.restore({ transaction: transaction });
-
-      const filename = artifact!.getFileName();
-      await FileStorageOperation.restoreBinaryToStorageFolder(filename);
-
-      await transaction.commit();
-      Logger.info("Release has been restored successfully!");
-    } catch (error) {
-      Logger.error(error as string);
-      await transaction.rollback();
-      throw error;
-    }
+    await ReleaseDAL.deleteReleaseByPublicId(id);
+    Logger.info("Release has been removed successfully!");
   }
 
   public async getAllReleases(
-    param: ProjectIdPathParam,
-    queryParam: ReleaseBaseQueryParam,
+    queryParam: ReleaseBaseQueryParam
   ): Promise<readonly ReleaseAttributesDTO[]> {
-    const { projectId } = param;
-    const { channel, limit, offset } = queryParam;
+    const { projectId, status, limit, offset } = queryParam;
+    await ReleaseBaseQueryParamSchema.parseAsync(queryParam);
     const project = await ProjectDAL.findProjectByPublicId(projectId);
 
     if (!project) {
@@ -213,155 +127,84 @@ export class ArtifactReleaseService {
     }
 
     const releases = await ReleaseDAL.getAllReleases(
-      project.getId(),
-      channel ?? "all",
+      project.id!,
+      status ?? "all",
       limit ?? 10,
-      offset ?? 0,
+      offset ?? 0
     );
     return releases.map((e) => e.toDTO());
   }
 
   public async getLatestRelease(
-    queryParam: ReleaseChannelQueryParam,
-    projectId: string,
-    apiKey: string,
-  ): Promise<Nullable<ReleaseAttributesDTO>> {
-    const { channel } = queryParam;
+    queryParam: ReleaseStatusQueryParam
+  ): Promise<Utils.Nullable<ReleaseAttributesDTO>> {
+    const { projectId, status } = queryParam;
 
-    const { cacheKey: key, cachedData } = await this._cache.getChannelBased<ReleaseAttributesDTO>(
-      projectId,
-      channel,
-    );
-
-    if (cachedData) {
-      Logger.info(`Release ${key} cache hit!`);
-      return cachedData;
+    const uniqueKey = projectId.concat(":").concat(status);
+    const isEmpty = await this._cache.isEmpty(uniqueKey);
+    if (!isEmpty) {
+      const cachedRelease = JSON.parse(await this._cache.get(uniqueKey)) as ReleaseAttributesDTO;
+      Logger.info(`Release: ${uniqueKey} cache hit!`);
+      return cachedRelease;
     }
 
-    const project = await ProjectDAL.findProjectByPublicIdAndApiKey(projectId, apiKey);
+    const project = await ProjectDAL.findProjectByPublicId(projectId);
     if (!project) {
       throw new ApiError("Project not found!", StatusCodes.NOT_FOUND);
     }
 
-    const release = await ReleaseDAL.getLatestRelease(project.getId(), channel ?? "staging");
+    const release = await ReleaseDAL.getLatestRelease(project.id!, status ?? "staging");
     if (!release) {
-      throw new ApiError(
-        `Latest ${channel ?? "staging"} release not found!`,
-        StatusCodes.NOT_FOUND,
-      );
+      throw new ApiError(`Latest ${status ?? "staging"} release not found!`, StatusCodes.NOT_FOUND);
     }
 
-    const { isCached, cacheKey } = await this._cache.addChannelBased(
-      projectId,
-      release.toDTO(),
-      channel,
-    );
-
-    if (isCached) {
-      Logger.info(`Release ${cacheKey} added to cache!`);
-    }
+    await this._cache.add(uniqueKey, JSON.stringify(release.toDTO()));
+    Logger.info(`${uniqueKey} added to cache!`);
 
     return release.toDTO();
   }
 
-  public async revoke(pathParam: ReleaseArtifactIdPathParams) {
-    const { releaseId, artifactId } = pathParam;
+  public async promoteRelease(dto: ReleaseStatusUpdateDTO): Promise<void> {
+    const { releaseId, status } = dto;
 
     const release = await ReleaseDAL.findReleaseByPublicId(releaseId);
     if (!release) {
       throw new ApiError("Release not found!", StatusCodes.NOT_FOUND);
     }
 
-    const artifact = await ArtifactDAL.findArtifactById(artifactId);
-    if (!artifact) {
-      throw new ApiError("Artifact file not found!", StatusCodes.NOT_FOUND);
-    }
-
-    if (!release.isProduction()) {
-      throw new ApiError("Only production releases can be revoked only!", StatusCodes.BAD_REQUEST);
-    }
-
-    const transaction = await db.transaction();
-    try {
-      await ReleaseDAL.updateReleaseChannel(release.getPublicId(), "revoked", transaction);
-      await ArtifactDAL.revokeArtifactStatus(release.getId(), transaction);
-      await transaction.commit();
-
-      const project = await ProjectDAL.findProjectByInternalId(release.getProjectForeignKeyId());
-      const { isInvalidated, cacheKey } = await this._cache.invalidateCache(
-        project!.getPublicId(),
-        "production",
-      );
-
-      if (isInvalidated) {
-        Logger.info(`Invalidated release ${cacheKey} from cache!`);
-      }
-    } catch (error) {
-      await transaction.rollback();
-      Logger.error(error as string);
-      throw error;
-    }
-  }
-
-  public async promoteToProduction(pathParam: ReleaseArtifactIdPathParams): Promise<void> {
-    const { releaseId, artifactId } = pathParam;
-
-    const release = await ReleaseDAL.findReleaseByPublicId(releaseId);
-    if (!release) {
-      throw new ApiError("Release not found!", StatusCodes.NOT_FOUND);
-    }
-
-    const artifact = await ArtifactDAL.findArtifactById(artifactId);
-    if (!artifact) {
-      throw new ApiError("Artifact file not found!", StatusCodes.NOT_FOUND);
-    }
-
-    const project = await ProjectDAL.findProjectByInternalId(release.getProjectForeignKeyId());
+    const project = await ProjectDAL.findProjectByInternalId(release.project_id_fk!);
     if (!project) {
       throw new ApiError("Project not found!", StatusCodes.NOT_FOUND);
     }
 
-    if (release.isRevoked()) {
+    if (release.status === status) {
+      throw new ApiError(`Release is already set as ${status}`, StatusCodes.CONFLICT);
+    }
+
+    if (status === "production" && release.status === "draft") {
       throw new ApiError(
-        `Revoked production releases cannot be promoted again!`,
-        StatusCodes.CONFLICT,
+        `Release can only be promoted to production from staging only!`,
+        StatusCodes.BAD_REQUEST
       );
     }
 
-    if (release.isDraft()) {
+    if (status === "staging" && release.status === "production") {
       throw new ApiError(
-        `Only staging release can be promoted to production! Current release is in draft mode.`,
-        StatusCodes.CONFLICT,
+        `Release cannot be downgraded from production to staging!`,
+        StatusCodes.BAD_REQUEST
       );
     }
 
-    if (release.isProduction()) {
-      throw new ApiError("Release already locked as a production channel!", StatusCodes.CONFLICT);
-    }
+    // !handle them via transactions....
+    await ReleaseDAL.updateStatus(releaseId, status);
+    await ReleaseDAL.setProductionReleaseDate(releaseId);
 
-    if (release.isStaging()) {
-      const transaction = await db.transaction();
-      try {
-        await ReleaseDAL.updateReleaseChannel(releaseId, "production", transaction);
-        await ReleaseDAL.setProductionReleaseDate(releaseId, transaction);
-        await transaction.commit();
-      } catch (error) {
-        Logger.error("Error ", error as string);
-        await transaction.rollback();
-        throw error;
-      } finally {
-        const { staging, production } = await this._cache.invalidateCacheChannels(
-          project.getPublicId(),
-        );
-
-        if (staging.isCached) {
-          Logger.info(`Invalidated release ${staging.key} from cache!`);
-        }
-
-        if (production.isCached) {
-          Logger.info(`Invalidated release ${production.key} from cache!`);
-        }
-      }
+    // evicting project's latest stale release from cache.....
+    const projectId = project.public_id;
+    const uniqueKey = projectId!.concat(":").concat("staging");
+    if (!(await this._cache.isEmpty(uniqueKey))) {
+      await this._cache.evict(uniqueKey);
+      Logger.info(`${uniqueKey} evicted from cache!`);
     }
   }
 }
