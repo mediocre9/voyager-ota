@@ -1,5 +1,5 @@
-import { ArtifactInspectionQueue, TaskInputData, TaskOutputData } from "@queues/artifact.queue";
-import { NullableOrUndefined } from "@interfaces/common/common";
+import { ArtifactSignatureQueue, QueueInputData, QueueOutputData } from "@queues/artifact.queue";
+import { NullableOrUndefined } from "@utils/utils";
 import { Job, JobState } from "bullmq";
 import { StatusCodes } from "http-status-codes";
 import { inject, injectable } from "tsyringe";
@@ -20,30 +20,30 @@ export interface TaskStatusMessage {
   statusCode: StatusCodes;
 }
 
-export interface TaskResultData {
+export interface TaskCreatedData {
   id: string;
   timestamps: number;
 }
 
 export interface TaskStatus {
-  status: TaskStatusMessage;
-  state: ArtifactJobStates;
-  data: TaskOutputData;
+  state: TaskStatusMessage;
+  status: ArtifactJobStates;
+  data: QueueOutputData;
 }
 
 @injectable()
-export class ArtifactInspectionQueueService {
+export class ArtifactQueueService {
   constructor(
-    @inject(ArtifactInspectionQueue)
-    private readonly _queue: ArtifactInspectionQueue,
+    @inject(ArtifactSignatureQueue)
+    private readonly _queue: ArtifactSignatureQueue
   ) {}
 
-  public async putJob(jobData: TaskInputData): Promise<TaskResultData> {
+  public async putJob(jobData: QueueInputData): Promise<TaskCreatedData> {
     const job = await this._queue.enQueueArtifact(jobData);
     return { id: job.id!, timestamps: job.timestamp };
   }
 
-  public async getJob(jobId: string): Promise<NullableOrUndefined<Job<unknown, TaskOutputData>>> {
+  public async getJob(jobId: string): Promise<NullableOrUndefined<Job<unknown, QueueOutputData>>> {
     return await this._queue.getJob(jobId);
   }
 
@@ -52,12 +52,12 @@ export class ArtifactInspectionQueueService {
     return job?.isCompleted();
   }
 
-  public async getData(jobId: string): Promise<TaskOutputData> {
+  public async getData(jobId: string): Promise<QueueOutputData> {
     const job = await this._queue.getJob(jobId);
     return job!.returnvalue;
   }
 
-  public async getCurrentJobState(jobId: string): Promise<ArtifactJobStates> {
+  public async getCurrentJobStatus(jobId: string): Promise<ArtifactJobStates> {
     if (!(await this._isJobPresent(jobId))) {
       throw new Error("Job not Found!");
     }
@@ -99,19 +99,19 @@ export class ArtifactInspectionQueueService {
     return job !== undefined;
   }
 
-  public getJobStatus(status: ArtifactJobStates): TaskStatusMessage {
+  public getJobState(status: ArtifactJobStates): TaskStatusMessage {
     const states = new Map<ArtifactJobStates, TaskStatusMessage>([
       [
         ArtifactJobStates.ACTIVE,
         {
-          message: "Artifact build detection is being processed. Please wait....",
+          message: "Artifact is being processed. Please wait . . .",
           statusCode: StatusCodes.ACCEPTED,
         },
       ],
       [
         ArtifactJobStates.COMPLETED,
         {
-          message: "Artifact build detection completed with results!",
+          message: "Artifact processing completed!",
           statusCode: StatusCodes.OK,
         },
       ],
@@ -132,7 +132,7 @@ export class ArtifactInspectionQueueService {
       [
         ArtifactJobStates.WAITING,
         {
-          message: "Artifact processing is in waiting mode.",
+          message: "Artifact is in waiting mode",
           statusCode: StatusCodes.ACCEPTED,
         },
       ],
