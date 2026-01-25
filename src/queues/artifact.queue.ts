@@ -1,25 +1,22 @@
 import { Job, Queue } from "bullmq";
 import { redis as RedisConnection } from "@config/redis.connection.config";
 import { nanoid } from "nanoid";
-import { ArtifactBuildStatus } from "@models/artifact.model";
 
-export const ARTIFACT_QUEUE_NAME = "artifact-queue";
+export const ARTIFACT_QUEUE_NAME = "artifact-signature-queue";
 
 export const DEAD_LETTER_QUEUE_NAME = "dead-letter-queue";
 
-export interface TaskInputData {
-  artifactId: string;
+export interface QueueInputData {
   releaseId: string;
-  releaseInternalId: number;
   filename: string;
+  hash: string;
 }
 
-export interface TaskOutputData {
-  artifactId: string;
-  artifactStatus: "accepted" | "rejected";
-  detectedBinary: ArtifactBuildStatus;
-  message: string;
-  elapsedTime: number;
+export interface QueueOutputData {
+  id: string;
+  releaseId: string;
+  signature: string;
+  publicKey: string;
 }
 
 // TODO Implement DLQ (Dead letter Queue) as well
@@ -27,7 +24,7 @@ export interface TaskOutputData {
 // * need better backoff strategy algorithm....
 // * understand backoff strategies in detail....
 // * current approach is Jitter-Exponential BackOff Strategy Algorithm
-export class ArtifactInspectionQueue extends Queue<TaskInputData, TaskOutputData> {
+export class ArtifactSignatureQueue extends Queue<QueueInputData, QueueOutputData> {
   constructor() {
     super(ARTIFACT_QUEUE_NAME, {
       connection: RedisConnection,
@@ -39,7 +36,9 @@ export class ArtifactInspectionQueue extends Queue<TaskInputData, TaskOutputData
     });
   }
 
-  public async enQueueArtifact(data: TaskInputData): Promise<Job<TaskInputData, TaskOutputData>> {
+  public async enQueueArtifact(
+    data: QueueInputData
+  ): Promise<Job<QueueInputData, QueueOutputData>> {
     const jobId = nanoid();
     const jobName = `artifact-queue:${data.filename}-${Date.now().valueOf()}`;
 
@@ -47,7 +46,7 @@ export class ArtifactInspectionQueue extends Queue<TaskInputData, TaskOutputData
   }
 }
 
-// TODO implement later with better strategy....not used yet
+// TODO implement later with better strategy....
 export class DeadLetterQueue extends Queue {
   constructor() {
     super(DEAD_LETTER_QUEUE_NAME, {
