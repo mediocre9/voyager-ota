@@ -18,6 +18,5 @@ declare namespace NodeJS {
     MQTT_PASSWORD: string;
 
     BROKER_BASIC_AUTH_CREDENTIALS: string;
-    BROKER_BASE_URL: string;
   }
 }
