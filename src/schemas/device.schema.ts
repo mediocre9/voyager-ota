@@ -1,14 +1,29 @@
 import { z } from "zod";
 
-export const DeviceSchema = z.object({
-  projectId: z
-    .string()
-    .min(1, "project_id cannot be empty")
-    .regex(/^[a-zA-Z0-9_-]{21}$/, "Invalid project_id format"),
-  macAddress: z
-    .string()
-    .min(1, "mac_address cannot be empty")
-    .regex(/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/, "Invalid MAC-Address format"),
-});
+export const ReleaseIdMacAddressPathParamSchema = z.object(
+  {
+    releaseId: z.string().nonempty(),
+    macAddress: z
+      .mac({ delimiter: "-", error: "Invalid MAC-Address format!" })
+      .nonempty("macAddress path param is required!")
+      .nonoptional(),
+  },
+  { error: "releaseId and macAddress path params are required!" },
+);
+
+export const DeviceSchema = z.object(
+  {
+    macAddress: z
+      .mac({ delimiter: "-", error: "Invalid MAC-Address format!" })
+      .nonempty({ error: "macAddress field is empty!" })
+      .nonoptional("macAddress field is required!"),
+
+    status: z
+      .enum(["success", "failed"], { error: "status can either be success or failed!" })
+      .nonoptional(),
+  },
+  { error: "releaseId path param and macAddress and status [success, fail] fields are required!" },
+);
 
 export type DeviceDTO = z.infer<typeof DeviceSchema>;
+export type ReleaseIdMacAddressPathParam = z.infer<typeof ReleaseIdMacAddressPathParamSchema>;
