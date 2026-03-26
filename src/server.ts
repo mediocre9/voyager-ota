@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import "@models/index"; // please do not change the order of import paths otherwise the models wont be initialized....
 import { ApiError } from "@utils/error";
 import cors from "cors";
@@ -17,7 +15,7 @@ import { authWebRouter } from "@routes/web/auth.routes";
 import { projectApiRouter } from "@routes/apis/project.routes";
 import { deviceReleaseApiRouter, releaseApiRouter } from "@routes/apis/release.routes";
 import { taskApiRouter } from "@routes/apis/artifact.task.routes";
-import { isAuthenticated } from "middlewares/auth";
+import { isAuthenticated } from "@middlewares/auth";
 import morgan from "morgan";
 import { Logger } from "@utils/logger";
 import { PurgingCronJob } from "@cron/purge.cron";
