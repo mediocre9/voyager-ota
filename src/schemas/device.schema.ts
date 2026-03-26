@@ -4,7 +4,7 @@ export const ReleaseIdMacAddressPathParamSchema = z.object(
   {
     releaseId: z.string().nonempty(),
     macAddress: z
-      .mac({ delimiter: "-", error: "Invalid MAC-Address format!" })
+      .mac({ delimiter: ":", error: "Invalid MAC-Address format!" })
       .nonempty("macAddress path param is required!")
       .nonoptional(),
   },
@@ -14,7 +14,7 @@ export const ReleaseIdMacAddressPathParamSchema = z.object(
 export const DeviceSchema = z.object(
   {
     macAddress: z
-      .mac({ delimiter: "-", error: "Invalid MAC-Address format!" })
+      .mac({ delimiter: ":", error: "Invalid MAC-Address format!" })
       .nonempty({ error: "macAddress field is empty!" })
       .nonoptional("macAddress field is required!"),
 
@@ -22,7 +22,9 @@ export const DeviceSchema = z.object(
       .enum(["success", "failed"], { error: "status can either be success or failed!" })
       .nonoptional(),
   },
-  { error: "releaseId path param and macAddress and status [success, fail] fields are required!" },
+  {
+    error: "releaseId path param and macAddress and status [success, failed] fields are required!",
+  },
 );
 
 export type DeviceDTO = z.infer<typeof DeviceSchema>;
