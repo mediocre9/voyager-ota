@@ -10,7 +10,6 @@ import {
   TaskStatus,
 } from "./artifact.queue.service";
 import { TaskIdPathParam } from "@schemas/task.schema";
-import { Logger } from "@utils/logger";
 
 @injectable()
 export class ArtifactInspectionTaskService {
