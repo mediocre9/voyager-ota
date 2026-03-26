@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
-
 import express from "express";
 import { ArtifactReleaseController } from "@controllers/api/release.controller";
 import { ArtifactStorageController } from "@controllers/api/artifact.storage.controller";
@@ -63,8 +61,8 @@ deviceReleaseApiRouter
   .get(releaseController.getLatestRelease.bind(releaseController));
 
 deviceReleaseApiRouter
-  .route("/:releaseId/status")
-  .post(deviceUpdateController.update.bind(deviceUpdateController));
+  .route("/:releaseId/devices/status")
+  .put(deviceUpdateController.update.bind(deviceUpdateController));
 
 deviceReleaseApiRouter
   .route("/:releaseId/devices/:macAddress/status")
