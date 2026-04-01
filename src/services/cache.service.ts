@@ -20,21 +20,8 @@ export abstract class CacheService {
   }
 
   public async get<T = string>(key: string): Promise<T> {
-    const _isJSON = (data: string): boolean => {
-      try {
-        JSON.parse(data);
-      } catch (error) {
-        Logger.error((error as SyntaxError).message);
-        return false;
-      }
-      return true;
-    };
-
     const data = (await redis.get(key))!;
-    if (_isJSON(data)) {
-      return JSON.parse(data) as T;
-    }
-    return data as T;
+    return JSON.parse(data) as T;
   }
 
   public async remove(key: string): Promise<void> {
