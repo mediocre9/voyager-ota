@@ -3,15 +3,15 @@ import { DataTypes, ENUM, InferAttributes, InferCreationAttributes, Model } from
 import { Project } from "./project.model";
 
 export enum OutBoxState {
-  PROCESSED,
-  PROCESSING,
-  PENDING,
-  FAILED,
+  PROCESSED = "processed",
+  PROCESSING = "processing",
+  PENDING = "pending",
+  FAILED = "failed",
 }
 
 export enum OutBoxEvent {
-  DELETE,
-  RESTORE,
+  DELETE = "delete",
+  RESTORE = "restore",
 }
 
 export class OutBox extends Model<InferAttributes<OutBox>, InferCreationAttributes<OutBox>> {
