@@ -43,7 +43,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use(express.json());
 
-app.use(morgan("combine"));
+app.use(morgan("combined"));
 
 const store = new RedisStore({
   client: redis,
