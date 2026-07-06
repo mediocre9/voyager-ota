@@ -1,10 +1,11 @@
 import { Project } from "@models/project.model";
 import { generateApiKey } from "@utils/utils";
-import sequelize, { Transaction } from "sequelize";
+import sequelize, { Sequelize, Transaction } from "sequelize";
 import { Op } from "sequelize";
 import { Nullable } from "../types";
 import { Release } from "@models/release.model";
 import { Artifact } from "@models/artifact.model";
+import { User } from "@models/index";
 
 export type ProjectData = {
   userId: number;
@@ -170,4 +171,52 @@ export async function getSoftDeletedProjects(date: Date): Promise<readonly Proje
     },
     paranoid: false,
   });
+}
+
+export async function findDormantProjects(limit: number, date: Date): Promise<readonly Project[]> {
+  return await Project.findAll({
+    include: [
+      { model: Release, as: "Releases" },
+      { model: User, as: "User" },
+    ],
+    where: {
+      last_activity: {
+        [Op.lte]: date,
+      },
+      is_suspended: false,
+    },
+    order: [[sequelize.col("last_activity"), "ASC"]],
+    limit: limit,
+  });
+}
+
+export async function purgeDormantProjects(date: Date, transaction?: Transaction): Promise<number> {
+  return await Project.destroy({
+    where: {
+      last_activity: {
+        [Op.lte]: date,
+      },
+      is_suspended: true,
+    },
+    transaction: transaction,
+    force: true,
+  });
+}
+
+export async function updateProjectSuspendStatus(
+  projectId: number,
+  status: boolean,
+  transaction?: Transaction,
+): Promise<void> {
+  await Project.update(
+    {
+      is_suspended: status,
+    },
+    {
+      where: {
+        id: projectId,
+      },
+      transaction: transaction,
+    },
+  );
 }

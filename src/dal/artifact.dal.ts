@@ -135,6 +135,7 @@ export async function deleteArtifactByReleaseId(
     where: { release_id_fk: releaseId },
     force: hardDelete,
     transaction: transaction,
+    individualHooks: true,
   });
 }
 
@@ -146,6 +147,7 @@ export async function softDeleteArtifactByReleaseId(
     where: { release_id_fk: releaseId },
     force: false,
     transaction: transaction,
+    individualHooks: true,
   });
 }
 
@@ -172,6 +174,7 @@ export async function purgeAllArtifacts(
     },
     transaction: transactionObject,
     force: true,
+    individualHooks: true,
   });
 }
 
@@ -181,6 +184,7 @@ export async function deleteByFilename(filename: string, transaction: Transactio
     where: { filename: filename },
     force: true,
     transaction: transaction,
+    individualHooks: true,
   });
 }
 export type ArtifactUpdateOptions = {
@@ -203,7 +207,7 @@ export async function createOrUpdate(
       original_filename: opts?.originalFileName,
       hash: opts?.hash,
     },
-    { transaction: transaction },
+    { transaction: transaction, hooks: true },
   );
   return artifact;
 }
@@ -260,6 +264,7 @@ export async function updateArtifactStatus(
         [Op.and]: [{ release_id_fk: releaseId }, { filename: filename }],
       },
       transaction: transaction,
+      individualHooks: true,
     },
   );
 }

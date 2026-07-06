@@ -174,3 +174,14 @@ Release.init(
     deletedAt: "deleted_at",
   },
 );
+
+async function _releaseCallBackHook(release: Release): Promise<void> {
+  await Project.update(
+    { last_activity: new Date(), is_suspended: false },
+    { where: { id: release.getProjectForeignKeyId() } },
+  );
+}
+
+Release.afterCreate(_releaseCallBackHook);
+
+Release.afterUpdate(_releaseCallBackHook);
