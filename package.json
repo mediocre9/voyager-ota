@@ -19,6 +19,7 @@
   "author": "Mediocre9",
   "license": "ISC",
   "dependencies": {
+    "@getbrevo/brevo": "^6.0.2",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.67.0",
