@@ -52,12 +52,15 @@ export async function updateReleaseChannel(
   channel: ReleaseChannel,
   transaction?: Transaction,
 ): Promise<void> {
-  await Release.upsert(
+  await Release.update(
+    { channel: channel },
     {
-      channel: channel,
-      public_id: releaseId,
+      where: {
+        public_id: releaseId,
+      },
+      individualHooks: true,
+      transaction: transaction,
     },
-    { transaction: transaction },
   );
 }
 
@@ -72,6 +75,7 @@ export async function setProductionReleaseDate(
         [Op.and]: [{ public_id: releaseId }, { channel: "production" }],
       },
       transaction: transaction,
+      individualHooks: true,
     },
   );
 }
