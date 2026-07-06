@@ -6,10 +6,6 @@ import { StorageManager } from "@services/storage.manager";
 import { setTimeout } from "node:timers/promises";
 import * as path from "node:path";
 
-function _isBinaryFile(filename: string): boolean {
-  return path.extname(filename) === ".bin";
-}
-
 // * checks if file is 30 mins older.....
 function _isRecentlyUploaded(filename: string): boolean {
   const MAX_TIME = isDevEnvironment() ? 60 * 1000 : (3600 / 2) * 1000; // dev 1 min ms and 30 mins in ms for prod....
@@ -28,7 +24,7 @@ const OrphanFileCronJob = new CronJob(CRON_EXPRESSION, async () => {
   try {
     const files = await StorageManager.getDirentFiles();
     for (const file of files) {
-      if (!_isBinaryFile(file.name) || _isRecentlyUploaded(file.name)) {
+      if (_isRecentlyUploaded(file.name)) {
         continue;
       }
 
