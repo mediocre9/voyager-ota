@@ -19,5 +19,8 @@ declare namespace NodeJS {
 
     BROKER_BASIC_AUTH_CREDENTIALS: string;
     BROKER_BASE_URL: string;
+    BREVO_SMTP_API_KEY: string;
+    BREVO_SMTP_SENDER_NAME: string;
+    BREVO_SMTP_SENDER_EMAIL: string;
   }
 }
