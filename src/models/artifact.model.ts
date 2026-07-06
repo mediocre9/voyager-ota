@@ -8,6 +8,7 @@ import {
 } from "sequelize";
 import { Release } from "./release.model";
 import { nanoid } from "nanoid";
+import { Project } from "./project.model";
 
 export interface ArtifactFileDTO {
   id: string;
@@ -146,3 +147,19 @@ Artifact.init(
     deletedAt: "deleted_at",
   },
 );
+
+async function _artifactCallBackHook(artifact: Artifact): Promise<void> {
+  const release = await Release.findOne({ where: { id: artifact.getReleaseForeignKeyId() } });
+  if (release) {
+    await Project.update(
+      { last_activity: new Date(), is_suspended: false },
+      { where: { id: release.getProjectForeignKeyId() } },
+    );
+  }
+}
+
+Artifact.afterCreate(_artifactCallBackHook);
+
+Artifact.afterDestroy(_artifactCallBackHook);
+
+Artifact.afterUpdate(_artifactCallBackHook);
