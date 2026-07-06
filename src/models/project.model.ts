@@ -2,13 +2,7 @@ import { db } from "@config/db.config";
 import { nanoid } from "nanoid";
 import { User } from "./user.model";
 import { generateApiKey } from "@utils/utils";
-import {
-  CreationOptional,
-  DataTypes,
-  InferAttributes,
-  InferCreationAttributes,
-  Model,
-} from "sequelize";
+import { DataTypes, InferAttributes, InferCreationAttributes, Model } from "sequelize";
 import { Release } from "./release.model";
 
 export class Project extends Model<InferAttributes<Project>, InferCreationAttributes<Project>> {
@@ -18,8 +12,12 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
   declare project_name?: string;
   declare api_key?: string;
   declare board_type?: "ESP32" | "ESP8266";
-  declare deleted_at?: CreationOptional<Date>;
   declare Releases?: Release[];
+  declare User?: User;
+  declare is_suspended?: boolean;
+  declare last_activity?: Date | null;
+  declare updated_at?: Date | null;
+  declare deleted_at?: Date | null;
 
   getPublicId() {
     return this.getDataValue("public_id")!;
@@ -51,6 +49,28 @@ export class Project extends Model<InferAttributes<Project>, InferCreationAttrib
 
   getProjectName() {
     return this.getDataValue("project_name")!;
+  }
+
+  getInitialReleaseChannel() {
+    return this.Releases !== undefined && this.Releases.length > 0
+      ? this.Releases.at(0)!.getChannel()
+      : null;
+  }
+
+  hasNoReleases() {
+    return this.Releases === undefined || this.Releases.length === 0;
+  }
+
+  hasReleases() {
+    return this.Releases !== undefined && this.Releases.length > 0;
+  }
+
+  isInitialReleaseNonProduction() {
+    return (
+      this.Releases !== undefined &&
+      this.Releases.length > 0 &&
+      !this.Releases.at(0)?.isProduction()
+    );
   }
 }
 
@@ -93,6 +113,16 @@ Project.init(
       allowNull: false,
       defaultValue: "ESP32",
       values: ["ESP32", "ESP8266"],
+    },
+    is_suspended: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    },
+    last_activity: { type: DataTypes.DATE, allowNull: true, defaultValue: new Date() },
+    updated_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
     deleted_at: {
       type: DataTypes.DATE,
