@@ -4,7 +4,6 @@ import { isDevEnvironment } from "@config/config";
 import { CronJob } from "cron";
 import { StorageManager } from "@services/storage.manager";
 import { setTimeout } from "node:timers/promises";
-import * as path from "node:path";
 
 // * checks if file is 30 mins older.....
 function _isRecentlyUploaded(filename: string): boolean {
@@ -17,7 +16,7 @@ function _isRecentlyUploaded(filename: string): boolean {
 // *Runs on sunday 2 times a day at 12:00am and 3:00am......
 // *for development 3 minutes.....
 const CRON_EXPRESSION = isDevEnvironment() ? "*/180 * * * * *" : "0 0 0,3 * * 7";
-const DELAY = 2 * 1000; // 2 seconds delay.....
+const DELAY = 100; // 100ms delay.....
 
 const OrphanFileCronJob = new CronJob(CRON_EXPRESSION, async () => {
   Logger.info("Orphan file cleanup cron job inititated!");
