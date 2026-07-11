@@ -97,8 +97,8 @@ async function _fileProcessor(
 
 const worker = new ArtifactInspectionWorker(ArtifactQueue.ARTIFACT_QUEUE_NAME, _fileProcessor, {
   limiter: {
-    max: 50, // should be later consider in prod....
-    duration: 60 * 1000, // same with this....
+    max: 300, // 300 jobs per 5 minutes......
+    duration: 5 * 60 * 1000, // 5 mins.....
   },
   connection: RedisConnection,
   autorun: true,
@@ -106,7 +106,7 @@ const worker = new ArtifactInspectionWorker(ArtifactQueue.ARTIFACT_QUEUE_NAME, _
     age: 3600,
     count: 2000,
   },
-
+  concurrency: 5,
   removeOnFail: {
     age: 24 * 3600,
     count: 5000,

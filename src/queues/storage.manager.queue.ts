@@ -28,8 +28,8 @@ export class StorageManagerQueue extends Queue<
     super(STORAGE_MANAGER_QUEUE_NAME, {
       connection: RedisConnection,
       defaultJobOptions: {
-        attempts: 5,
-        backoff: { type: "exponential", delay: 1000, jitter: 0.3 },
+        attempts: 6,
+        backoff: { type: "exponential", delay: 2 * 1000, jitter: 0.3 },
       },
     });
   }
