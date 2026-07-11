@@ -32,9 +32,9 @@ export class ArtifactInspectionQueue extends Queue<TaskArtifactInputData, TaskAr
     super(ARTIFACT_QUEUE_NAME, {
       connection: RedisConnection,
       defaultJobOptions: {
-        attempts: 3,
-        delay: 10 * 1000,
-        backoff: { type: "exponential", delay: 1000, jitter: 0.3 },
+        attempts: 5,
+        delay: 2 * 1000,
+        backoff: { type: "exponential", delay: 2 * 1000, jitter: 0.3 },
       },
     });
   }

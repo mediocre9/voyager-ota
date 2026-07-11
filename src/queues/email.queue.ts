@@ -15,7 +15,7 @@ export class EmailQueue extends Queue<EmailContentData> {
       defaultJobOptions: {
         attempts: 5,
         delay: 2 * 1000,
-        backoff: { type: "exponential", delay: 5 * 1000, jitter: 0.3 },
+        backoff: { type: "exponential", delay: 2 * 1000, jitter: 0.3 },
       },
     });
   }

@@ -122,8 +122,8 @@ const worker = new StorageManagerWorker(
   },
   {
     limiter: {
-      max: 500,
-      duration: 60 * 1000,
+      max: 50, // 50 jobs per 30 minutes......
+      duration: 30 * 60 * 1000, // 30 mins.....
     },
     connection: RedisConnection,
     autorun: true,
@@ -131,7 +131,7 @@ const worker = new StorageManagerWorker(
       age: 3600,
       count: 2000,
     },
-
+    concurrency: 3,
     removeOnFail: {
       age: 24 * 3600,
       count: 5000,
