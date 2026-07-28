@@ -10,12 +10,6 @@ import { StatusCodes } from "http-status-codes";
 import { injectable } from "tsyringe";
 import { OutBoxEvent, OutBoxState } from "@models/outbox.model";
 
-// ! [Bug]: file related operations inside db transactions can fail and may cause data inconsistencies
-// ! [PRI-1]
-
-// * Status: Open.
-// * Issue #27
-// * This issue is for Outbox just remember that....
 export interface ProjectDTOFields {
   id: string;
   projectName: string;
