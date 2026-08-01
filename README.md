@@ -3,7 +3,7 @@
 
 Backend platform for managing over-the-air (OTA) firmware releases for embedded devices.
 
-[![License](https://img.shields.io/github/license/mediocre9/voyager-ota)](LICENSE)
+[![License](https://img.shields.io/github/license/mediocre9/voyagerota-core)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-24.3.0-339933?logo=node.js&logoColor=white)](#)
 [![SDK](https://img.shields.io/badge/SDK-VoyagerOTAClient-2ea44f)](https://github.com/mediocre9/VoyagerOTAClient)
 
