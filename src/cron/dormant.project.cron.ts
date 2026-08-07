@@ -3,18 +3,16 @@ import "@models/index";
 import * as ProjectDAL from "@dal/project.dal";
 import { EmailQueue } from "@queues/email.queue";
 import { isDevEnvironment } from "@config/config";
-import { EmailProjectTemplate, getTemplate } from "@config/email.client";
+import { DormantProjectEmailAlert, EmailTemplate, getTemplate } from "@config/email.client";
 import { ReleaseChannel } from "@models/release.model";
 import { Logger } from "@utils/logger";
 
-const queue = new EmailQueue();
+const queue = new EmailQueue<DormantProjectEmailAlert>();
 
 type NonProductionChannel = Extract<ReleaseChannel, "draft" | "staging">;
 
-function _getEmailTemplateType(channel: NonProductionChannel): EmailProjectTemplate {
-  return channel === "draft"
-    ? EmailProjectTemplate.DRAFT_RELEASE
-    : EmailProjectTemplate.STAGING_RELEASE;
+function _getEmailTemplateType(channel: NonProductionChannel): EmailTemplate {
+  return channel === "draft" ? EmailTemplate.DRAFT_RELEASE : EmailTemplate.STAGING_RELEASE;
 }
 
 function _getScheduledDeletionDate(lastActitity: Date): string {
@@ -35,7 +33,7 @@ const dormantProjectCron = new CronJob(CRON_EXPRESSION, async (): Promise<void> 
   const projects = await ProjectDAL.findDormantProjects(150, DURATION_IN_MILLISECONDS);
   for (const project of projects) {
     if (project.hasNoReleases()) {
-      const template = getTemplate(project.getProjectName(), EmailProjectTemplate.DRAFT_RELEASE);
+      const template = getTemplate(project.getProjectName(), EmailTemplate.DRAFT_RELEASE);
       const scheduledDate = _getScheduledDeletionDate(project.last_activity!);
       await queue.enqueueEmail({
         subject: `Action needed: project deletion scheduled on ${scheduledDate}`,

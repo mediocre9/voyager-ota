@@ -4,11 +4,7 @@ import { IEmailContentData } from "@config/email.client";
 
 export const EMAIL_QUEUE_NAME = "email-queue-name";
 
-export interface EmailContentData extends IEmailContentData {
-  projectId: number;
-}
-
-export class EmailQueue extends Queue<EmailContentData> {
+export class EmailQueue<T extends IEmailContentData> extends Queue<IEmailContentData> {
   constructor() {
     super(EMAIL_QUEUE_NAME, {
       connection: RedisConnection,
@@ -20,7 +16,7 @@ export class EmailQueue extends Queue<EmailContentData> {
     });
   }
 
-  async enqueueEmail(email: EmailContentData): Promise<void> {
+  async enqueueEmail(email: T): Promise<void> {
     await this.add("email-queue-job-name", email);
   }
 }
