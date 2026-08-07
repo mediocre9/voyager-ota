@@ -1,4 +1,3 @@
-
 # VoyagerOTA
 
 Backend platform for managing over-the-air (OTA) firmware releases for embedded devices.
@@ -13,17 +12,18 @@ Backend platform for managing over-the-air (OTA) firmware releases for embedded 
 
 ## Features
 
-- [X] Monotonically increasing semantic versioning.
-- [X] Background processing using dedicated workers.
-- [X] Artifact build hash collision prevention.
-- [X] Transactional storage operations using the Outbox Pattern.
-- [X] Redis based release caching.
-- [X] Staging and production release channels.
-- [X] Production release revocation.
-- [X] Project deletion and restoration.
-- [X] Automatic orphan file storage cleanup.
-- [X] Automatic expired records purging.
-- [X] Dormant project detection with email notifications.
+- [x] Monotonically increasing semantic versioning.
+- [x] Background processing using dedicated workers.
+- [x] Artifact build hash collision prevention.
+- [x] Transactional storage operations using the Outbox Pattern.
+- [x] Redis based release caching.
+- [x] Staging and production release channels.
+- [x] Production release revocation.
+- [x] Project deletion and restoration.
+- [x] Automatic orphan file storage cleanup.
+- [x] Automatic expired records purging.
+- [x] Service Alert and Retry Mechanism.
+- [x] Dormant project detection with email notifications.
 
 ## Planned Features
 
@@ -50,7 +50,9 @@ npm run outbox-relay
 npm run orphan-cron
 npm run purger-cron
 npm run dormant-project-cron
+npm run service-alert-cron
 ```
+
 ## Client Sdk Integration
 
 > [!TIP]
