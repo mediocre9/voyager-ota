@@ -13,6 +13,7 @@
     "orphan-cron": "npx tsx --watch --env-file=.env.development src/cron/orphan.file.cleaner.cron.ts",
     "purger-cron": "npx tsx --watch --env-file=.env.development src/cron/purge.projects.cron.ts",
     "dormant-project-cron": "npx tsx --watch --env-file=.env.development src/cron/dormant.project.cron.ts",
+    "service-alert-cron": "npx tsx --watch --env-file=.env.development src/cron/service.status.alert.cron.ts",
     "seed": "npx tsx src/seed/seed.ts",
     "sandbox": "npx tsx --watch sandbox/sandbox.ts"
   },
@@ -42,6 +43,7 @@
     "mqtt": "^5.14.1",
     "multer": "^2.0.2",
     "nanoid": "^5.1.6",
+    "node-cache": "^5.1.2",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pretty-bytes": "^7.1.0",
@@ -58,6 +60,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@types/backoff": "^2.5.5",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/ejs": "^3.1.5",

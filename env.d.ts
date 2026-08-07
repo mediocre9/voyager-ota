@@ -22,5 +22,6 @@ declare namespace NodeJS {
     BREVO_SMTP_API_KEY: string;
     BREVO_SMTP_SENDER_NAME: string;
     BREVO_SMTP_SENDER_EMAIL: string;
+    BREVO_SMTP_RECEPIENT_DEV_EMAIL: string;
   }
 }
