@@ -5,7 +5,6 @@ import { CronJob } from "cron";
 import InMemoryCacheStore from "node-cache";
 import * as child_process from "node:child_process";
 import * as os from "node:os";
-import { setTimeout } from "node:timers/promises";
 import * as util from "node:util";
 
 const exec = util.promisify(child_process.exec);
@@ -28,10 +27,10 @@ async function _runServiceStatusCheck(service: ExternalService) {
   return { serviceName: service, status: "error" as SystemCTLProcessStatus };
 }
 
-async function _restartService(service: ExternalService): Promise<void> {
+// * let the service restart synchronously.....before doing anything....
+function _restartService(service: ExternalService): void {
   try {
-    await exec(`systemctl restart ${service}`);
-    await setTimeout(15 * 1000); // 15s margin....
+    child_process.execSync(`systemctl restart ${service}`);
   } catch (error) {
     Logger.error(error as string);
   }
@@ -71,7 +70,7 @@ async function _systemCTLProcessStatusCheckerCron(): Promise<void> {
     }
 
     for (let j = 0; j < MAX_RETRIES; j++) {
-      await _restartService(serviceName);
+      _restartService(serviceName);
       const service = await _runServiceStatusCheck(serviceName);
 
       if (service.status !== "active") {
