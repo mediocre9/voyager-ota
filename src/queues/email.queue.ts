@@ -9,9 +9,9 @@ export class EmailQueue<T extends IEmailContentData> extends Queue<IEmailContent
     super(EMAIL_QUEUE_NAME, {
       connection: RedisConnection,
       defaultJobOptions: {
-        attempts: 5,
+        attempts: 6,
         delay: 2 * 1000,
-        backoff: { type: "exponential", delay: 2 * 1000, jitter: 0.3 },
+        backoff: { type: "exponential", delay: 20 * 1000, jitter: 0.3 },
       },
     });
   }
