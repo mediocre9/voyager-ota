@@ -1,22 +1,60 @@
 import { Job, Worker as EmailWorker } from "bullmq";
-import * as EmailQueue from "./email.queue";
+import { EMAIL_QUEUE_NAME, EmailQueue } from "./email.queue";
 import { Logger } from "@utils/logger";
-import { redis as RedisConnection } from "@config/redis.connection.config";
+import { redis, redis as RedisConnection } from "@config/redis.connection.config";
 import { isDevEnvironment } from "@config/config";
+import { getNextDayTimeDifference } from "@utils/utils";
 import * as ProjectDAL from "@dal/project.dal";
 import {
   sendEmail,
   IEmailContentData,
   DormantProjectEmailAlert,
   SystemStatusEmailAlert,
+  getBrevoSMTPDailyQuota,
 } from "@config/email.client";
 
 type EmailAlertContentData = DormantProjectEmailAlert | SystemStatusEmailAlert;
 
-// * Configured to process 200 jobs (emails) under 24 hours to avoid rate limiting.....
+const BREVO_QUOTA_CHECK_KEY = "brevo-quota-check-key";
+const BREVO_QUOTA_CHECK_DATA = "checked";
+
+async function _isQuotaRecentlyChecked(): Promise<boolean> {
+  return (await redis.get(BREVO_QUOTA_CHECK_KEY)) !== null;
+}
+
+async function _cacheRecentlyCheckedQuota(): Promise<void> {
+  await redis.setex(BREVO_QUOTA_CHECK_KEY, 15 * 60, BREVO_QUOTA_CHECK_DATA); // 15m expiration.....
+}
+
+async function _invalidateQuotaCheckedCache(): Promise<void> {
+  await redis.del(BREVO_QUOTA_CHECK_KEY);
+}
+
+const emailQueue = new EmailQueue();
+
 const worker = new EmailWorker(
-  EmailQueue.EMAIL_QUEUE_NAME,
+  EMAIL_QUEUE_NAME,
   async (job: Job<EmailAlertContentData>): Promise<void> => {
+    if (!isDevEnvironment()) {
+      const isQuotaRecentlyChecked = await _isQuotaRecentlyChecked();
+
+      if (!isQuotaRecentlyChecked) {
+        const { remainingQuota, isDailyFreeQuotaLow } = await getBrevoSMTPDailyQuota();
+        Logger.info(`Brevo remaining quota: ${remainingQuota}`);
+
+        await _cacheRecentlyCheckedQuota();
+
+        if (isDailyFreeQuotaLow) {
+          const rateLimitDuration = getNextDayTimeDifference();
+          Logger.warn(`Email worker ratelimited with duration of ${rateLimitDuration}`);
+
+          await _invalidateQuotaCheckedCache();
+          await emailQueue.rateLimit(rateLimitDuration);
+          throw EmailWorker.RateLimitError();
+        }
+      }
+    }
+
     try {
       if (!isDevEnvironment()) {
         await sendEmail(job.data);
@@ -34,29 +72,28 @@ const worker = new EmailWorker(
   },
   {
     limiter: {
-      max: 200,
-      duration: 24 * 3600 * 1000, // 24h in ms.....
+      max: 15,
+      duration: 15 * 60 * 1000, // 15m in ms.....
     },
     connection: RedisConnection,
     autorun: true,
-    concurrency: 5,
     removeOnComplete: {
-      age: 3600,
-      count: 2000,
+      age: 24 * 3600,
+      count: 300,
     },
     removeOnFail: {
       age: 24 * 3600,
-      count: 5000,
+      count: 600,
     },
   },
 );
 
 worker.on("ready", () => {
-  Logger.info("email notice worker started!");
+  Logger.info("email worker started!");
 });
 
 worker.on("active", (job: Job<IEmailContentData>, _) => {
-  Logger.info(`job: ${job.id} is being processed!`);
+  Logger.info(`Attempt: ${job.attemptsMade} - job: ${job.id} is being processed!`);
 });
 
 worker.on("error", (error) => {
@@ -68,5 +105,5 @@ worker.on("failed", (_, error) => {
 });
 
 worker.on("completed", (job: Job<IEmailContentData>, _) => {
-  Logger.info(`Sent deletion email: ${job.data.recipientEmail}`);
+  Logger.info(`Sent email: ${job.data.recipientEmail}`);
 });
