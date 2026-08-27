@@ -58,3 +58,13 @@ export async function sendEmail(content: IEmailContentData) {
     },
   });
 }
+
+type BrevoQuotaDetail = { isDailyFreeQuotaLow: boolean; remainingQuota: number };
+
+export async function getBrevoSMTPDailyQuota(): Promise<BrevoQuotaDetail> {
+  const LOW_QUOTA_THRESHOLD = 10;
+  const account = await brevo.account.getAccount();
+  const remainingQuota = account.plan.at(0)?.credits ?? 0;
+  const isDailyFreeQuotaLow = remainingQuota <= LOW_QUOTA_THRESHOLD;
+  return { isDailyFreeQuotaLow, remainingQuota };
+}
