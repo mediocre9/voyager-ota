@@ -4,6 +4,7 @@ import * as semver from "semver";
 import { uniqueNamesGenerator, adjectives, colors } from "unique-names-generator";
 import { spaceNames } from "./space-dictionary-names";
 import { Logger } from "./logger";
+import dayjs from "dayjs";
 
 /**
  * @deprecated This function has been deprecated.
@@ -98,4 +99,12 @@ export async function generateFileHash(filename: string): Promise<string> {
       reject(error);
     });
   });
+}
+
+export function getNextDayTimeDifference(): number {
+  const now = dayjs();
+  const nextDay = now.startOf("day").add(1, "day");
+  const differenceInMilliseconds = nextDay.diff(now, "milliseconds");
+  const TIME_SAFETY_BUFFER = 1 * 3600 * 1000; // 1hr in ms.....
+  return differenceInMilliseconds + TIME_SAFETY_BUFFER;
 }
