@@ -20,7 +20,7 @@
   "author": "Mediocre9",
   "license": "ISC",
   "dependencies": {
-    "@getbrevo/brevo": "^6.0.2",
+    "@getbrevo/brevo": "^6.0.3",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.67.0",
@@ -28,6 +28,7 @@
     "connect-redis": "^8.1.0",
     "cors": "^2.8.6",
     "cron": "^4.4.0",
+    "dayjs": "^1.11.23",
     "dotenv": "^17.3.1",
     "ejs": "^4.0.1",
     "express": "^5.2.1",
